@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base62 Encoder/Decoder</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin-bottom: 40px; }
+        textarea { width: 100%; height: 150px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Base62 Encoder/Decoder</h1>
+        
+        <div class="section">
+            <h2>Encode IDs to /user_encodedtxt</h2>
+            <p>Enter IDs (one per line):</p>
+            <textarea v-model="encodeInput" placeholder="e.g.\n7948843734\n5003576094"></textarea>
+            <h3>Output:</h3>
+            <pre v-if="encodedOutput">{{ encodedOutput }}</pre>
+        </div>
+        
+        <div class="section">
+            <h2>Decode /user_encodedtxt to IDs</h2>
+            <p>Enter encoded texts (one per line, with or without /user_ prefix):</p>
+            <textarea v-model="decodeInput" placeholder="e.g.\n/user_8fwXN0\n5ScUiE"></textarea>
+            <h3>Output:</h3>
+            <pre v-if="decodedOutput">{{ decodedOutput }}</pre>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // Base-62 encoder
+        function base62Encode(numStr) {
+            let num = BigInt(numStr);
+            if (num === 0n) return '0';
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            const result = [];
+            while (num > 0n) {
+                const rem = Number(num % 62n);
+                result.push(chars[rem]);
+                num = num / 62n;
+            }
+            return result.reverse().join('');
+        }
+
+        // Base-62 decoder
+        function base62Decode(encoded) {
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            let val = 0n;
+            for (let char of encoded) {
+                const index = chars.indexOf(char);
+                if (index === -1) return 'Invalid';
+                val = val * 62n + BigInt(index);
+            }
+            return val.toString();
+        }
+
+        createApp({
+            data() {
+                return {
+                    encodeInput: '',
+                    decodeInput: ''
+                };
+            },
+            computed: {
+                encodedOutput() {
+                    return this.encodeInput
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line && !isNaN(line))
+                        .map(id => `/user_${base62Encode(id)}`)
+                        .join('\n');
+                },
+                decodedOutput() {
+                    return this.decodeInput
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line)
+                        .map(line => {
+                            const encoded = line.startsWith('/user_') ? line.slice(6) : line;
+                            const decoded = base62Decode(encoded);
+                            return decoded !== 'Invalid' ? decoded : 'Invalid encoding';
+                        })
+                        .join('\n');
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
